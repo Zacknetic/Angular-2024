@@ -5,3 +5,4 @@ div#demo {border-style: solid;}
 div#demo {border-color: gray;}
 div#demo {width: 200px;}
 div#demo {height: 40px;}
+:host {display: block; background-color: yellow;}

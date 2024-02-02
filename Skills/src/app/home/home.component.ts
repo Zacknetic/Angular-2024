@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-home',
@@ -12,16 +13,27 @@ export class HomeComponent implements OnInit {
   customerName: string = "zack";
   customerEmail: string = "";
   customerPhone: string = "";
-
-  constructor() { }
+  currId = "";
+  constructor(private http: HttpClient) { }
 
   onSubmit(form: NgForm) {
-    console.log(form.value);
+    this.http.post('http://localhost:3000/customers', form.value).subscribe((response: any) => {
+      console.log(response);
+      //output the id of the new customer
+      console.log(response['id']);
+      this.currId = response['id'];
+      // console.log(response);
+    });
+    
+  }
 
-    console.log(this.customerName);
+  deleteCustomer() {
+    this.http.delete(`http://localhost:3000/customers/${this.currId}`).subscribe((response) => {
+      console.log(response);
+    });
   }
 
   ngOnInit(): void {
-      
+
   }
 }

@@ -1,0 +1,16 @@
+{
+  "customers": [
+    {
+      "id": "d37a",
+      "customerName": "James Tyberius Kirk",
+      "customerEmail": "JKirk@Starfleet.com",
+      "customerPhone": "555-555-5555"
+    },
+    {
+      "id": "d37b",
+      "customerName": "Spock",
+      "customerEmail": "Spock@VulcanScienceFoundation.com",
+      "customerPhone": ""
+    }
+  ]
+}

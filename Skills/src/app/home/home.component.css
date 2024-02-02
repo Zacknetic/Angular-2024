@@ -1,0 +1,7 @@
+div#demo {color: red;}
+div#demo:hover {color: blue;}
+div#demo:active {color: green;}
+div#demo {border-style: solid;}
+div#demo {border-color: gray;}
+div#demo {width: 200px;}
+div#demo {height: 40px;}

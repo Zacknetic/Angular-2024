@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { shareReplay, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-home',
@@ -13,8 +15,14 @@ export class HomeComponent implements OnInit {
   customerName: string = "zack";
   customerEmail: string = "";
   customerPhone: string = "";
+  data$: Observable<any>;
   currId = "";
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {
+    this.data$ = this.http.get('http://localhost:3000/customers').pipe(
+      tap(console.log),
+      shareReplay()
+    );
+  }
 
   onSubmit(form: NgForm) {
     this.http.post('http://localhost:3000/customers', form.value).subscribe((response: any) => {
@@ -24,7 +32,7 @@ export class HomeComponent implements OnInit {
       this.currId = response['id'];
       // console.log(response);
     });
-    
+
   }
 
   deleteCustomer() {
@@ -34,6 +42,8 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit(): void {
-
+    this.data$.subscribe((response) => {
+      console.log(response);
+    });
   }
 }

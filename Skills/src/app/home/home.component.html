@@ -1,3 +1,13 @@
 <div id="demo">
   <p>Welcome to Angular</p>
+  <form #customerForm="ngForm" (ngSubmit)="onSubmit(customerForm)">
+      <!-- <label for="name">Customer name:</label> -->
+      <input type="text" id="customerName" required [(ngModel)]="customerName" name="customerName">
+      <input type="email" class="form-control" id="customerEmail" required [(ngModel)]="customerEmail"
+        name="customerEmail">
+      <input type="tel" class="form-control" id="customerPhone" required [(ngModel)]="customerPhone"
+        name="customerPhone">
+
+      <button type="submit" [disabled]="!customerForm.form.valid">Submit</button>
+  </form>
 </div>

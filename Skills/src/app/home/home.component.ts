@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 
 @Component({
   selector: 'app-home',
@@ -15,8 +15,10 @@ export class HomeComponent implements OnInit {
 
   constructor() { }
 
-  onSubmit(form: FormsModule) {
-    console.log(form);
+  onSubmit(form: NgForm) {
+    console.log(form.value);
+
+    console.log(this.customerName);
   }
 
   ngOnInit(): void {

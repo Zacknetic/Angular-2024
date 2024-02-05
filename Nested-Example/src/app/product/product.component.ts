@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Output, EventEmitter } from '@angular/core';
 
 @Component({
   selector: 'app-product',
@@ -10,6 +10,12 @@ import { Component, Input } from '@angular/core';
 export class ProductComponent {
 
   constructor() { }
-  @Input()
-  p_title!: string;
+  // @Input()
+  // p_title!: string;
+
+  @Output() c_newProductEvent = new EventEmitter<string>();
+
+  addProduct(value: string) {
+    this.c_newProductEvent.emit(value);
+  }
 }

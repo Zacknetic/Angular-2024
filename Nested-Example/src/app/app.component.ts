@@ -11,4 +11,8 @@ import { ProductComponent } from './product/product.component';
 })
 export class AppComponent {
   title = 'Skills';
+
+  p_addProduct(newProduct: string) {
+    console.log('Product added' + newProduct);
+  }
 }

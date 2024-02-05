@@ -1,2 +1,9 @@
 <h2>Product List</h2>
-<div>{{ p_title }}</div>
+<div>
+    Product 1
+</div>
+<label> 
+    Add a new product:
+    <input #newProduct>
+</label>
+<button (click)="addProduct(newProduct.value)">Add new product</button>

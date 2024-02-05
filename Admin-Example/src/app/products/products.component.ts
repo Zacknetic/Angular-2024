@@ -2,12 +2,13 @@ import { NgFor } from '@angular/common';
 import { Component } from '@angular/core';
 import { NgxPaginationModule } from 'ngx-pagination'; // At the top of your module
 import { getRandomNumbers } from '../../assets/utils/randomNumbers';
+import { ClassifyPipe } from '../classify.pipe';
 
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [NgFor, NgxPaginationModule],
+  imports: [NgFor, NgxPaginationModule, ClassifyPipe],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })

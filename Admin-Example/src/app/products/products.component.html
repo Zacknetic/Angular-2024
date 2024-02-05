@@ -13,6 +13,6 @@
       | paginate : { itemsPerPage, currentPage }
   "
 >
-  {{ currNum }}
+  {{ currNum | classify}}
 </div>
 <pagination-controls (pageChange)="pageChanged($event)"></pagination-controls>

@@ -1,16 +1,19 @@
 import { NgFor } from '@angular/common';
 import { Component } from '@angular/core';
+import { NgxPaginationModule } from 'ngx-pagination'; // At the top of your module
+import { getRandomNumbers } from '../../assets/utils/randomNumbers';
+
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [NgFor],
+  imports: [NgFor, NgxPaginationModule],
   templateUrl: './products.component.html',
   styleUrl: './products.component.css'
 })
 export class ProductsComponent {
   // products = ["GPU", "CPU", "Memory", "Motherboard", "Storage", "Power Supply", "Case", "Cooling"]
-  employees= [
+  employees = [
     {
       name: "John",
       employeeId: "123",
@@ -27,5 +30,13 @@ export class ProductsComponent {
       department: "Finance"
     }
   ]
+
+  randomNumbers = <[]>getRandomNumbers();
+  itemsPerPage: number = 10;
+  currentPage: number = 1;
+
+  pageChanged(event: any) {
+    this.currentPage = event;
+  }
 
 }

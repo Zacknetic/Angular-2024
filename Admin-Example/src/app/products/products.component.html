@@ -1,7 +1,18 @@
-<h1 *ngFor="let employee of employees">
+<!-- <h1 *ngFor="let employee of employees">
   {{ employee.name }} 
         <ul>
             <li>Employee Id: {{ employee.employeeId }}</li>
             <li>Department: {{ employee.department }}</li>
         </ul>
-</h1>
+</h1> -->
+
+<h2>Product List</h2>
+<div
+  *ngFor="
+    let currNum of randomNumbers
+      | paginate : { itemsPerPage, currentPage }
+  "
+>
+  {{ currNum }}
+</div>
+<pagination-controls (pageChange)="pageChanged($event)"></pagination-controls>

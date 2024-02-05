@@ -32,7 +32,7 @@ export class ProductsComponent {
     }
   ]
 
-  randomNumbers = <[]>getRandomNumbers().sort((a, b) => a - b).filter((value) => value > 2000);
+  randomNumbers = <[]>getRandomNumbers().sort((a, b) => a - b).filter((value: number) => value > 2000);
   itemsPerPage: number = 10;
   currentPage: number = 1;
 

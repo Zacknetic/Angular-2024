@@ -1,3 +1,7 @@
-<li *ngFor="let product of products">
-  {{ product }}
-</li>
+<h1 *ngFor="let employee of employees">
+  {{ employee.name }} 
+        <ul>
+            <li>Employee Id: {{ employee.employeeId }}</li>
+            <li>Department: {{ employee.department }}</li>
+        </ul>
+</h1>

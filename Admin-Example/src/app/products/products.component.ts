@@ -9,6 +9,23 @@ import { Component } from '@angular/core';
   styleUrl: './products.component.css'
 })
 export class ProductsComponent {
-  products = ["GPU", "CPU", "Memory", "Motherboard", "Storage", "Power Supply", "Case", "Cooling"]
+  // products = ["GPU", "CPU", "Memory", "Motherboard", "Storage", "Power Supply", "Case", "Cooling"]
+  employees= [
+    {
+      name: "John",
+      employeeId: "123",
+      department: "IT"
+    },
+    {
+      name: "Jane",
+      employeeId: "124",
+      department: "HR"
+    },
+    {
+      name: "Jim",
+      employeeId: "125",
+      department: "Finance"
+    }
+  ]
 
 }

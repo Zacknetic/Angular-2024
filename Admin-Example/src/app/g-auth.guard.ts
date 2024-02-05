@@ -1,10 +1,16 @@
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { Injectable } from '@angular/core';
+import { SAuthService } from './s-auth.service';
 
-export class gAuthGuard {
-  constructor() { }
-
-  static canActivate (route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
-    return false;
+@Injectable({
+  providedIn: 'root'
+})
+export class GAuthGuard {
+  constructor(private authService: SAuthService) {
   }
-  
+
+  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
+    return this.authService.getToken();
+  }
+
 }

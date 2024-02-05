@@ -20,7 +20,7 @@ export class HomeComponent implements OnInit {
   constructor(private http: HttpClient) {
     this.data$ = this.http.get('http://localhost:3000/customers').pipe(
       tap(console.log),
-      shareReplay()
+      shareReplay() //caches the response. even if the component is destroyed and recreated, the response will be cached
     );
   }
 

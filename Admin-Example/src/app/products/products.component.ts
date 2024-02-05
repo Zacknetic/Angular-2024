@@ -31,7 +31,7 @@ export class ProductsComponent {
     }
   ]
 
-  randomNumbers = <[]>getRandomNumbers();
+  randomNumbers = <[]>getRandomNumbers().sort((a, b) => a - b);
   itemsPerPage: number = 10;
   currentPage: number = 1;
 

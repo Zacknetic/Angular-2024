@@ -1,0 +1,14 @@
+.smallVideo {
+    width: 150px;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    border-radius: 10px;
+    /* border: 1px solid #000; */
+  }
+  
+  .bigVideo {
+    width: auto;
+    height: 50%;
+  }
+  

@@ -1,1 +1,7 @@
-<p>room works!</p>
+<div class="videos">
+    <video #localVideo autoplay muted class="smallVideo"></video>
+    <video #remoteVideo autoplay class="bigVideo"></video>
+  </div>
+  <input type="text" [(ngModel)]="roomName" placeholder="Room Name">
+  <button (click)="joinRoom()">Join Room</button>
+  

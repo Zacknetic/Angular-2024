@@ -21,12 +21,14 @@ export class RoomComponent implements OnInit, OnDestroy {
 	private localStream!: MediaStream;
 	private roomId!: string;
 	private userName!: string; // Assume this is set somewhere, e.g., through a dialog
+	private isLocalStreamReady = false;
+	private pendingOffers: any[] = []; // To store incoming offers before the local stream is ready
 
 	constructor(private route: ActivatedRoute, private router: Router) {}
 
 	ngOnInit(): void {
 		this.roomId = this.route.snapshot.paramMap.get('id')!;
-		this.userName = prompt('Enter your name', 'User') || 'User'; // Example of setting the userName
+		this.userName = prompt('Enter your name', '') || 'Spock'; // Example of setting the userName
 		this.setupSignaling();
 		this.startCapture();
 	}
@@ -34,10 +36,11 @@ export class RoomComponent implements OnInit, OnDestroy {
 	ngOnDestroy(): void {
 		this.signaling.close();
 		this.peerConnections.forEach((pc) => pc.close());
+		this.localStream.getTracks().forEach((track) => track.stop());
 	}
 
 	private setupSignaling(): void {
-		this.signaling = new WebSocket('wss://your-websocket-server-url');
+		this.signaling = new WebSocket('wss://192.168.50.12:3000');
 
 		this.signaling.onopen = () => {
 			// Join the room right after establishing the WebSocket connection
@@ -52,7 +55,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
 		this.signaling.onmessage = async (message) => {
 			const data = JSON.parse(message.data);
-
+			console.log('Received message:', data);
 			switch (data.type) {
 				case 'offer':
 					await this.handleOffer(data.offer, data.name);
@@ -64,7 +67,11 @@ export class RoomComponent implements OnInit, OnDestroy {
 					this.handleCandidate(data.candidate, data.name);
 					break;
 				case 'user-joined':
-					this.prepareConnection(data.name);
+					if (this.userName !== data.name) {
+						// Avoid initiating an offer to self
+						this.prepareConnection(data.name);
+						this.initiateOffer(data.name);
+					}
 					break;
 				case 'user-left':
 					this.handleUserLeft(data.name);
@@ -74,9 +81,29 @@ export class RoomComponent implements OnInit, OnDestroy {
 		};
 	}
 
-	private prepareConnection(userName: string): void {
-		if (userName === this.userName) return; // Ignore self
+	async initiateOffer(userName: string) {
+		const pc = this.peerConnections.get(userName);
+		if (pc) {
+			const offer = await pc.createOffer();
+			await pc.setLocalDescription(offer);
+			this.signaling.send(
+				JSON.stringify({
+					type: 'offer',
+					offer: offer,
+					name: this.userName,
+					target: userName,
+					roomId: this.roomId,
+				})
+			);
+		}
+	}
 
+	private prepareConnection(userName: string): void {
+		if (userName === this.userName || !this.localStream) {
+			console.log('Local stream not ready or attempting to connect to self.');
+			return; // Early return if localStream is not ready or attempting to connect to self
+		}
+		console.log('Preparing connection with', userName);
 		const pc = new RTCPeerConnection({
 			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
@@ -87,6 +114,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
 		pc.onicecandidate = (event) => {
 			if (event.candidate) {
+				console.log('Sending ice candidate to', userName);
 				this.signaling.send(
 					JSON.stringify({
 						type: 'candidate',
@@ -99,9 +127,17 @@ export class RoomComponent implements OnInit, OnDestroy {
 		};
 
 		pc.ontrack = (event) => {
+			console.log('Received remote track from', userName);
 			if (event.streams && event.streams[0]) {
 				this.addVideoStream(event.streams[0], userName);
+			} else {
+				console.log('No remote stream found');
 			}
+		};
+
+		pc.oniceconnectionstatechange = (event) => {
+			console.log('ICE connection state change:', pc.iceConnectionState);
+			console.log('event', event)
 		};
 
 		this.peerConnections.set(userName, pc);
@@ -123,8 +159,13 @@ export class RoomComponent implements OnInit, OnDestroy {
 		offer: RTCSessionDescriptionInit,
 		userName: string
 	): Promise<void> {
+		console.log('Received offer from', userName);
 		if (!this.peerConnections.has(userName)) {
 			this.prepareConnection(userName);
+		}
+		if (!this.isLocalStreamReady) {
+			this.pendingOffers.push({ offer, name: userName });
+			return;
 		}
 
 		const pc = this.peerConnections.get(userName)!;
@@ -180,14 +221,26 @@ export class RoomComponent implements OnInit, OnDestroy {
 			video: true,
 			audio: true,
 		});
-		this.addVideoStream(this.localStream, this.userName); // Add local stream to the video grid
+		this.addVideoStream(this.localStream, this.userName, true);
+		this.isLocalStreamReady = true;
+		this.processPendingOffers();
+	}
+	private processPendingOffers(): void {
+		while (this.pendingOffers.length > 0) {
+			const data = this.pendingOffers.shift();
+			this.handleOffer(data.offer, data.name);
+		}
 	}
 
-	private addVideoStream(stream: MediaStream, userName: string): void {
+	private addVideoStream(
+		stream: MediaStream,
+		userName: string,
+		isLocal: boolean = false
+	): void {
 		const videoElement = document.createElement('video');
 		videoElement.srcObject = stream;
 		videoElement.autoplay = true;
-		videoElement.muted = userName === this.userName; // Mute for local user
+		videoElement.muted = isLocal; // Mute the video if it's the local user's stream
 		videoElement.setAttribute('data-user', userName); // Set a data attribute to identify the user's video
 
 		const nameTag = document.createElement('div');
@@ -195,10 +248,12 @@ export class RoomComponent implements OnInit, OnDestroy {
 		nameTag.classList.add('video-name-tag');
 
 		const videoContainer = document.createElement('div');
-		videoContainer.classList.add('video-container');
+		videoContainer.classList.add(
+			isLocal ? 'local-video-container' : 'remote-video-container'
+		); // Apply different styling for local and remote videos
 		videoContainer.appendChild(videoElement);
 		videoContainer.appendChild(nameTag);
-
+		console.log('videoGrid', this.videoGrid);
 		this.videoGrid.nativeElement.appendChild(videoContainer);
 	}
 }

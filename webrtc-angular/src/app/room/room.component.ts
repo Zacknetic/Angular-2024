@@ -1,120 +1,204 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import {
+	Component,
+	OnInit,
+	ViewChild,
+	ElementRef,
+	OnDestroy,
+} from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
 	selector: 'app-room',
 	standalone: true,
 	imports: [],
 	templateUrl: './room.component.html',
-	styleUrl: './room.component.css',
+	styleUrls: ['./room.component.css'],
 })
-// implements OnInit
-export class RoomComponent {
-	@ViewChild('localVideo')
-	localVideo!: ElementRef<HTMLVideoElement>;
-	@ViewChild('remoteVideo')
-	remoteVideo!: ElementRef<HTMLVideoElement>;
-	private peerConnection!: RTCPeerConnection;
+export class RoomComponent implements OnInit, OnDestroy {
+	@ViewChild('videoGrid') videoGrid!: ElementRef;
+	private peerConnections: Map<string, RTCPeerConnection> = new Map();
 	private signaling!: WebSocket;
+	private localStream!: MediaStream;
+	private roomId!: string;
+	private userName!: string; // Assume this is set somewhere, e.g., through a dialog
 
-	constructor() {}
+	constructor(private route: ActivatedRoute, private router: Router) {}
 
 	ngOnInit(): void {
-		this.initializePeerConnection();
+		this.roomId = this.route.snapshot.paramMap.get('id')!;
+		this.userName = prompt('Enter your name', 'User') || 'User'; // Example of setting the userName
 		this.setupSignaling();
+		this.startCapture();
 	}
-	private initializePeerConnection(): void {
-		this.peerConnection = new RTCPeerConnection({
-			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }], // Example STUN server
+
+	ngOnDestroy(): void {
+		this.signaling.close();
+		this.peerConnections.forEach((pc) => pc.close());
+	}
+
+	private setupSignaling(): void {
+		this.signaling = new WebSocket('wss://your-websocket-server-url');
+
+		this.signaling.onopen = () => {
+			// Join the room right after establishing the WebSocket connection
+			this.signaling.send(
+				JSON.stringify({
+					type: 'join',
+					roomId: this.roomId,
+					name: this.userName,
+				})
+			);
+		};
+
+		this.signaling.onmessage = async (message) => {
+			const data = JSON.parse(message.data);
+
+			switch (data.type) {
+				case 'offer':
+					await this.handleOffer(data.offer, data.name);
+					break;
+				case 'answer':
+					this.handleAnswer(data.answer, data.name);
+					break;
+				case 'candidate':
+					this.handleCandidate(data.candidate, data.name);
+					break;
+				case 'user-joined':
+					this.prepareConnection(data.name);
+					break;
+				case 'user-left':
+					this.handleUserLeft(data.name);
+					break;
+				// Handle other message types, such as chat messages or errors
+			}
+		};
+	}
+
+	private prepareConnection(userName: string): void {
+		if (userName === this.userName) return; // Ignore self
+
+		const pc = new RTCPeerConnection({
+			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 		});
 
-		this.peerConnection.onicecandidate = (event) => {
+		this.localStream.getTracks().forEach((track) => {
+			pc.addTrack(track, this.localStream);
+		});
+
+		pc.onicecandidate = (event) => {
 			if (event.candidate) {
 				this.signaling.send(
-					JSON.stringify({ type: 'candidate', candidate: event.candidate })
+					JSON.stringify({
+						type: 'candidate',
+						candidate: event.candidate,
+						name: this.userName,
+						target: userName,
+					})
 				);
 			}
 		};
 
-		this.peerConnection.ontrack = (event) => {
-			if (event.streams.length > 0) {
-				this.remoteVideo.nativeElement.srcObject = event.streams[0];
-				console.log('Stream added to remote video');
-			} else {
-				console.log('No streams');
+		pc.ontrack = (event) => {
+			if (event.streams && event.streams[0]) {
+				this.addVideoStream(event.streams[0], userName);
 			}
 		};
+
+		this.peerConnections.set(userName, pc);
 	}
 
-	private setupSignaling(): void {
-		this.signaling = new WebSocket('wss://192.168.50.12:3000');
-		this.signaling.onmessage = (messageEvent) => {
-			const reader = new FileReader();
-			reader.onloadend = () => {
-				const text = reader.result as string;
-				const data = JSON.parse(text);
-				console.log('Received message:', data);
-
-				switch (data.type) {
-					case 'offer':
-						this.handleOffer(data.offer);
-						break;
-					case 'answer':
-						this.handleAnswer(data.answer);
-						break;
-					case 'candidate':
-						this.handleCandidate(data.candidate);
-						break;
-					default:
-						break;
-				}
-			};
-
-			// Read the blob as text
-			reader.readAsText(messageEvent.data);
-		};
+	leaveRoom(): void {
+		this.signaling.send(
+			JSON.stringify({
+				type: 'leave',
+				name: this.userName,
+				roomId: this.roomId,
+			})
+		);
+		// Use the router to navigate back to the lobby
+		this.router.navigate(['/lobby']);
 	}
 
-	async startCapture(): Promise<void> {
-		const stream = await navigator.mediaDevices.getUserMedia({
+	private async handleOffer(
+		offer: RTCSessionDescriptionInit,
+		userName: string
+	): Promise<void> {
+		if (!this.peerConnections.has(userName)) {
+			this.prepareConnection(userName);
+		}
+
+		const pc = this.peerConnections.get(userName)!;
+		await pc.setRemoteDescription(new RTCSessionDescription(offer));
+		const answer = await pc.createAnswer();
+		await pc.setLocalDescription(answer);
+
+		this.signaling.send(
+			JSON.stringify({
+				type: 'answer',
+				answer,
+				name: this.userName,
+				target: userName,
+			})
+		);
+	}
+
+	private handleAnswer(
+		answer: RTCSessionDescriptionInit,
+		userName: string
+	): void {
+		const pc = this.peerConnections.get(userName);
+		if (pc) {
+			pc.setRemoteDescription(new RTCSessionDescription(answer));
+		}
+	}
+
+	private handleCandidate(
+		candidate: RTCIceCandidateInit,
+		userName: string
+	): void {
+		const pc = this.peerConnections.get(userName);
+		if (pc && candidate) {
+			pc.addIceCandidate(new RTCIceCandidate(candidate));
+		}
+	}
+
+	private handleUserLeft(userName: string): void {
+		const pc = this.peerConnections.get(userName);
+		if (pc) {
+			pc.close();
+			this.peerConnections.delete(userName);
+			// Optionally, remove the video element of the user who left
+			const videoElement = document.querySelector(`[data-user="${userName}"]`);
+			if (videoElement) {
+				videoElement.parentElement?.remove();
+			}
+		}
+	}
+
+	private async startCapture(): Promise<void> {
+		this.localStream = await navigator.mediaDevices.getUserMedia({
 			video: true,
 			audio: true,
 		});
-		this.localVideo.nativeElement.srcObject = stream;
-		this.localVideo.nativeElement.muted = true;
-		stream
-			.getTracks()
-			.forEach((track) => this.peerConnection.addTrack(track, stream));
+		this.addVideoStream(this.localStream, this.userName); // Add local stream to the video grid
 	}
 
-	joinRoom(roomName: string): void {
-		this.startCapture()
-			.then(() => {
-				this.peerConnection
-					.createOffer()
-					.then((offer) => {
-						this.peerConnection.setLocalDescription(offer);
-						this.signaling.send(
-							JSON.stringify({ type: 'offer', offer: offer, roomName })
-						);
-					})
-					.catch((error) => console.error('Error creating an offer', error));
-			})
-			.catch((error) => console.error('Error starting capture', error));
-	}
+	private addVideoStream(stream: MediaStream, userName: string): void {
+		const videoElement = document.createElement('video');
+		videoElement.srcObject = stream;
+		videoElement.autoplay = true;
+		videoElement.muted = userName === this.userName; // Mute for local user
+		videoElement.setAttribute('data-user', userName); // Set a data attribute to identify the user's video
 
-	private handleOffer(offer: RTCSessionDescriptionInit): void {
-		this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-		this.peerConnection.createAnswer().then((answer) => {
-			this.peerConnection.setLocalDescription(answer);
-			this.signaling.send(JSON.stringify({ type: 'answer', answer: answer }));
-		});
-	}
+		const nameTag = document.createElement('div');
+		nameTag.textContent = userName;
+		nameTag.classList.add('video-name-tag');
 
-	private handleAnswer(answer: RTCSessionDescriptionInit): void {
-		this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-	}
+		const videoContainer = document.createElement('div');
+		videoContainer.classList.add('video-container');
+		videoContainer.appendChild(videoElement);
+		videoContainer.appendChild(nameTag);
 
-	private handleCandidate(candidate: RTCIceCandidateInit | undefined): void {
-		this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+		this.videoGrid.nativeElement.appendChild(videoContainer);
 	}
 }

@@ -1,0 +1,8 @@
+<div *ngFor="let room of objectKeys(rooms)">
+	<div (click)="enterRoom(room)" style="cursor: pointer">
+		<h3>{{ room }}</h3>
+		<ul>
+			<li *ngFor="let user of rooms[room]">{{ user }}</li>
+		</ul>
+	</div>
+</div>

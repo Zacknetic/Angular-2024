@@ -1,9 +1,8 @@
 <div>
-    <input #roomInput type="text" placeholder="Room Name">
-    <button (click)="joinRoom(roomInput.value)">Join Room</button>
-  </div>
-  <div>
-    <video #localVideo autoplay muted class="smallVideo"></video>
-    <video #remoteVideo autoplay class="bigVideo"></video>
-  </div>
-  
+	<input #roomInput type="text" placeholder="Room Name" />
+	<button (click)="leaveRoom()">Leave Room</button>
+</div>
+<div>
+	<video #localVideo autoplay muted class="smallVideo"></video>
+	<video #remoteVideo autoplay class="bigVideo"></video>
+</div>

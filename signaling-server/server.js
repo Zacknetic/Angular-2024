@@ -4,42 +4,48 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const app = express();
 
-// Specify the path to your key and certificate
 const key = fs.readFileSync('./server.key', 'utf8');
 const cert = fs.readFileSync('./server.cert', 'utf8');
 
-// Create an HTTPS server
 const server = https.createServer({ key: key, cert: cert }, app);
-
-// Attach WebSocket server to the same HTTPS server
 const wss = new WebSocket.Server({ server });
 
+const rooms = {}; // Object to manage rooms and their members
+
+// Inside your WebSocket server setup (server.js)
 wss.on('connection', function connection(ws) {
-	console.log('A new client connected!');
+	let roomId;
+  
 	ws.on('message', function incoming(message) {
-		console.log('Raw message data:', message); // `message` is the raw data
-		try {
-			const data = JSON.parse(message); // Directly parse `message`
-			console.log('Parsed message:', data);
-
-			// Broadcasting message to all connected clients except the sender
-			wss.clients.forEach(function each(client) {
-				if (client !== ws && client.readyState === WebSocket.OPEN) {
-					client.send(message); // Sending the original message string
-				}
-			});
-		} catch (error) {
-			console.error('Error parsing message:', error);
+	  const data = JSON.parse(message);
+	  if (data.type === 'join') {
+		roomId = data.roomId;
+		if (!rooms[roomId]) {
+		  rooms[roomId] = new Set();
 		}
+		rooms[roomId].add(ws);
+	  } else {
+		rooms[roomId].forEach(client => {
+		  if (client !== ws && client.readyState === WebSocket.OPEN) {
+			client.send(message);
+		  }
+		});
+	  }
+	  // Handle other message types (offer, answer, candidate, chat)...
 	});
-});
+  
+	ws.on('close', function() {
+	  if (rooms[roomId]) {
+		rooms[roomId].delete(ws);
+		if (rooms[roomId].size === 0) {
+		  delete rooms[roomId];
+		}
+	  }
+	});
+  });
+  
 
-// app.get('/', (req, res) => {
-//   res.send('Hello HTTPS!');
-// });
-
-// Use your desired port
 const port = 3000;
 server.listen(port, () => {
-	console.log(`Server listening on https://192.168.50.12:${port}`);
+  console.log(`Server listening on https://192.168.50.12:${port}`);
 });
